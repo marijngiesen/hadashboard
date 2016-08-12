@@ -21,6 +21,9 @@ class Dashing.Haweather extends Dashing.Widget
     get: -> if @_temp then Math.floor(@_temp) else 0
     set: (key, value) -> @_temp = value
 
+  @accessor 'display_unit',
+    get: -> if @_unit then @_unit else '&deg;F'
+
   ready: ->
     if @get('bgcolor')
       $(@node).css("background-color", @get('bgcolor'))

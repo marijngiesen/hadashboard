@@ -1,4 +1,5 @@
-class Dashing.Hadevicetracker extends Dashing.ClickableWidget
+# class Dashing.Hadevicetracker extends Dashing.ClickableWidget
+class Dashing.Hadevicetracker extends Dashing.Widget
   constructor: ->
     super
     @queryState()

@@ -4,7 +4,7 @@ class Dashing.Hasensor extends Dashing.Widget
     @queryState()
 
   @accessor 'value',
-    get: -> if @_value then (if isNaN(Math.round(@_value)) then @_value else Math.round(@_value) ) else "??"
+    get: -> if @_value then @round(@_value, 1) else 0
     set: (key, value) -> @_value = value
 
   queryState: ->
@@ -22,3 +22,7 @@ class Dashing.Hasensor extends Dashing.Widget
       $(@node).css("background-color", "#444")
 
   onData: (data) ->
+
+  round: (value, precision) ->
+    multiplier = Math.pow(10, precision || 0)
+    return Math.round(value * multiplier) / multiplier

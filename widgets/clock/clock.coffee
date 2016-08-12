@@ -5,15 +5,20 @@ class Dashing.Clock extends Dashing.Widget
       $(@node).css("background-color", @get('bgcolor'))
     else
       $(@node).css("background-color", "#444")
+
     setInterval(@startTime, 500)
 
   startTime: =>
     today = new Date()
 
     h = today.getHours()
-    m = today.getMinutes()
-    m = @formatTime(m)
-    @set('time', @formatHours(h) + ":" + m + " " + @formatAmPm(h))
+    m = @formatTime(today.getMinutes())
+
+    if @get('timeformat') == '24h'
+      @set('time', h + ":" + m)
+    else
+      @set('time', @formatHours(h) + ":" + m + " " + @formatAmPm(h))
+
     @set('date', today.toLocaleDateString())
 
   formatTime: (i) ->

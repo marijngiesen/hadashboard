@@ -28,6 +28,6 @@ RUN gem install dashing \
 
 EXPOSE 3030
 
-VOLUME /app/lib /app/dashboards /app/hapush
+#VOLUME /app/lib /app/dashboards /app/hapush
 
 CMD /app/hapush/hapush.py -d /app/hapush/hapush.cfg && dashing start

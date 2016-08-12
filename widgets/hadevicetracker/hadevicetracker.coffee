@@ -1,4 +1,5 @@
-class Dashing.Hadevicetracker extends Dashing.ClickableWidget
+# class Dashing.Hadevicetracker extends Dashing.ClickableWidget
+class Dashing.Hadevicetracker extends Dashing.Widget
   constructor: ->
     super
     @queryState()
@@ -21,7 +22,7 @@ class Dashing.Hadevicetracker extends Dashing.ClickableWidget
     set: Batman.Property.defaultAccessor.set
 
   @accessor 'icon-style', ->
-    if @get('state') == 'home' then 'icon-present' else 'icon-absent'    
+    if @get('state') == 'home' then 'icon-present' else 'icon-absent'
 
   toggleState: ->
     newState = if @get('state') == 'home' then 'not_home' else 'home'

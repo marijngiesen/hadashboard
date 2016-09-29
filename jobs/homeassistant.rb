@@ -2,6 +2,7 @@ require 'json'
 require 'net/http'
 
 $selectedDimmer = {}
+$alarm_control_panel_code = ""
 
 $ha_api = $ha_url + "/api/"
 
@@ -73,6 +74,24 @@ post '/homeassistant/garage' do
 	return respondWithSuccess()
 end
 
+get '/homeassistant/cover' do
+	response = ha_api("states/cover." + params["widgetId"], "get")
+	return JSON.generate({"state" => response["state"]})
+end
+
+post '/homeassistant/cover' do
+	entity_id = "cover." + params["widgetId"]
+	command = "close_cover"
+	if params["command"] == "open" 
+		command = "open_cover"
+	else
+		command = "close_cover"
+	end
+	ha_api("services/cover/" + command, "post", {"entity_id" => entity_id})
+	return respondWithSuccess()
+end
+
+
 get '/homeassistant/lock' do
 	response = ha_api("states/lock." + params["widgetId"], "get")
 	return JSON.generate({"state" => response["state"]})
@@ -88,6 +107,51 @@ post '/homeassistant/lock' do
 	end
 	ha_api("services/lock/" + command, "post", {"entity_id" => entity_id})
 	return respondWithSuccess()
+end
+
+get '/homeassistant/alarm_control_panel_status' do
+    response = ha_api("states/alarm_control_panel." + params["widgetId"], "get")
+    return JSON.generate({"value" => response["state"]})
+end
+
+post '/homeassistant/alarm_control_panel_digit' do
+    digit = params["digit"]
+    alarm_entity = params["alarmEntity"]
+
+    if digit == "-"
+      # the 'clear' button has been pressed
+      # so blank the stored code and retrieve current status for display
+      $alarm_control_panel_code = ""
+      response = ha_api("states/alarm_control_panel." + alarm_entity, "get")
+      status_widget_value = response["state"]
+    else
+      # number has been pressed so add to code
+      $alarm_control_panel_code = $alarm_control_panel_code + digit
+      status_widget_value = $alarm_control_panel_code
+    end
+
+    # Send value back to the alarm status widget
+    send_event(alarm_entity, {
+      value: status_widget_value
+    })
+
+    return respondWithSuccess()
+end
+
+post '/homeassistant/alarm_control_panel_action' do
+    # action will be one of
+    #   disarm
+    #   arm_home
+    #   arm_away
+    #   trigger
+    if $alarm_control_panel_code == ""
+        ha_api("services/alarm_control_panel/alarm_" + params["action"], "post")
+    else
+        ha_api("services/alarm_control_panel/alarm_" + params["action"], "post", {"code" => $alarm_control_panel_code})
+    end
+    # now blank the code
+    $alarm_control_panel_code = ""
+    return respondWithSuccess()
 end
 
 get '/homeassistant/script' do
@@ -151,12 +215,22 @@ end
 
 get '/homeassistant/devicetracker' do
 	response = ha_api("states/device_tracker." + params["widgetId"], "get")
-	return JSON.generate({"state" => response["state"]})
+	if response["state"] == "not_home"
+		state = "away"
+	else
+		state = response["state"]
+	end
+		
+	return JSON.generate({"state" => state.upcase})
 end
 
 post '/homeassistant/devicetracker' do
 	entity_id = params["widgetId"]
-	ha_api("services/device_tracker/see", "post", {"dev_id" => entity_id, "location_name" => params["command"]})
+	state = params["command"].downcase
+	if state == "away"
+		state = "not_home"
+	end
+	ha_api("services/device_tracker/see", "post", {"dev_id" => entity_id, "location_name" => state})
 	return respondWithSuccess()
 end
 
@@ -205,32 +279,32 @@ end
 #Update the weather ever so often
 SCHEDULER.every '15m', :first_in => 0 do |job|
 	#Current weather
-	response = ha_api("states/sensor.weather_temperature", "get")
+	response = ha_api("states/sensor.forecastio_temperature", "get")
 	temp = response["state"]
 
-	response = ha_api("states/sensor.weather_humidity", "get")
+	response = ha_api("states/sensor.forecastio_humidity", "get")
 	humidity = response["state"]
 
-	response = ha_api("states/sensor.weather_precip_probability", "get")
+	response = ha_api("states/sensor.forecastio_precip_probability", "get")
 	precip = response["state"]
 
-	response = ha_api("states/sensor.weather_precip_intensity", "get")
+	response = ha_api("states/sensor.forecastio_precip_intensity", "get")
 	precipintensity = response["state"]
 
-	response = ha_api("states/sensor.weather_wind_speed", "get")
+	response = ha_api("states/sensor.forecastio_wind_speed", "get")
 	windspeed = response["state"]
 
-	response = ha_api("states/sensor.weather_pressure", "get")
+	response = ha_api("states/sensor.forecastio_pressure", "get")
 	pressure = response["state"]
 	
-	response = ha_api("states/sensor.weather_wind_bearing", "get")
+	response = ha_api("states/sensor.forecastio_wind_bearing", "get")
 	windbearing = response["state"]
 
 	
-	response = ha_api("states/sensor.weather_apparent_temperature", "get")
+	response = ha_api("states/sensor.forecastio_apparent_temperature", "get")
 	tempchill = response["state"]
 	
-	response = ha_api("states/sensor.weather_icon", "get")
+	response = ha_api("states/sensor.forecastio_icon", "get")
 	icon = response["state"].gsub(/-/, '_')
  
 	#Emit the event

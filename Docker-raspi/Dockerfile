@@ -1,5 +1,5 @@
-FROM ruby:2.2.5
-MAINTAINER Marijn Giesen <marijn@studio-donder.nl>
+FROM hypriot/rpi-ruby
+MAINTAINER steffen <devnull@snizzle.org>
 
 RUN apt-get update \
  && apt-get install -y \

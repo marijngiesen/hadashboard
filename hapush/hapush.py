@@ -95,7 +95,11 @@ def dashboard_update(widget_id, type, state):
       logger.info("group." + widget_id + " -> " + state['state'])
       call_ha(widget_id, values)
     elif type == "device_tracker":
-      values = {"state": state['state']}
+      if state['state'] == "not_home":
+        nstate = "away"
+      else:
+        nstate = state['state']
+      values = {"state": nstate.upper()}
       logger.info("devicetracker." + widget_id + " -> " + state['state'])
       call_ha(widget_id, values)
     elif type == "input_select":
@@ -128,9 +132,17 @@ def dashboard_update(widget_id, type, state):
       values = {"state": state['state']}
       logger.info("garage_door." + widget_id + " -> " + state['state'])
       call_ha(widget_id, values)
+    elif type == "cover":
+      values = {"state": state['state']}
+      logger.info("cover." + widget_id + " -> " + state['state'])
+      call_ha(widget_id, values)
     elif type == "lock":
       values = {"state": state['state']}
       logger.info("lock." + widget_id + " -> " + state['state'])
+      call_ha(widget_id, values)
+    elif type == "alarm_control_panel":
+      values = {"value": state['state']}
+      logger.info("alarm_control_panel." + widget_id + " -> " + state['state'])
       call_ha(widget_id, values)
     elif type == "script":
       values = {"mode": state['state']}
@@ -146,7 +158,9 @@ def translate_view(view):
   views = {
         "Hadevicetracker": "device_tracker",
         "Hagarage": "garage_door",
+        "Hacover": "cover",
         "Halock": "lock",
+        "Haalarmstatus": "alarm_control_panel",
         "Hainputboolean": "input_boolean",
         "Halux": "sensor",
         "Hascene": "scene",
@@ -158,7 +172,8 @@ def translate_view(view):
         "Hamotion": "binary_sensor",
         "Hamode": "script",
         "Hatemp": "sensor",
-        "Hasensor": "sensor"
+        "Hasensor": "sensor",
+        "Hameter": "sensor"
       }
   if view in views:
     return views[view]

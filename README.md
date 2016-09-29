@@ -12,11 +12,17 @@ The Dashboard is at its heart a [Dashing](http://dashing.io/) Dashboard. Dashing
 
 # Installation
 
-## 1. Clone the Repository
+Installation can be performed using Docker (Contributed by [marijngiesen](https://github.com/marijngiesen) or manually if Docker doesn't work for you. We also have a Raspberry PI version of Docker contributed by (snizzleorg)[https://community.home-assistant.io/users/snizzleorg/activity]
+
+## Using Docker (Non Raspian)
+
+Assuming you already have Docker installed, installation is fairly easy.
+
+### Clone the Repository
 Clone the **hadashboard** repository to the current local directory on your machine.
 
 ``` bash
-$ git clone https://github.com/acockburn/hadashboard.git
+$ git clone https://github.com/home-assistant/hadashboard.git
 ```
 
 Change your working directory to the repository root. Moving forward, we will be working from this directory.
@@ -25,7 +31,54 @@ Change your working directory to the repository root. Moving forward, we will be
 $ cd hadashboard
 ```
 
-## 2. Install Dashing and prereqs
+### Build the docker image
+
+```bash
+$ docker build -t hadashboard .
+```
+
+When the build completes, you can run the dashboard with:
+
+```bash
+$ docker run --name="hadashboard" -d -v <path_to_hadashboard>/dashboards:/app/dashboards -v <path_to_hadashboard>/lib/ha_conf.rb:/app/lib/ha_conf.rb -v <path_to_hadashboard>/hapush:/app/hapush --net=host hadashboard
+```
+
+This will use all of the same configuration files as specified below in the configuration sections, although you will need to make a few changes to the `hapush` configuration to match the docker's filesystem, detailed below.
+
+By default, the docker instance should pick up your timezone but if you want to explicitly set it you can add an environment variable for your specific zone as follows:
+
+```
+ -e "TZ=Europe/Amsterdam"
+ ```
+
+### Docker on Raspberry Pi
+
+Raspberry pi needs to use a different docker build file so the build command is slightly different:
+
+```bash
+$ docker build -f Docker-raspi/Dockerfile -t hadashboard .
+```
+
+Apart from that the other steps are identical.
+
+*Note - this is pretty slow even on a PI3, be prepared for it to take an hour or two to build all of the extensions and install everything*
+
+## Manual Installation
+
+### Clone the Repository
+Clone the **hadashboard** repository to the current local directory on your machine.
+
+``` bash
+$ git clone https://github.com/home-assistant/hadashboard.git
+```
+
+Change your working directory to the repository root. Moving forward, we will be working from this directory.
+
+``` bash
+$ cd hadashboard
+```
+
+### 2. Install Dashing and prereqs
 
 Essentially, you want to make sure that you have Ruby installed on your local machine. Then, install the Dashing gem:
 
@@ -52,24 +105,12 @@ Bundle will now install all the ruby prereqs for running dashing.
 Note: Prereqs will vary across different machines. So far users have reported requirements for some additional installs to allow the bundle to complete succesfully:
 
 - ruby-dev - `sudo apt-get install ruby-dev`
-- Postgress - `sudo apt-get install postgresql-9.4 postgresql-server-dev-9.4 libpq-dev sqlite libsqlite3-dev`
 - node-js - `sudo apt-get install nodejs`
 - execjs gem - `gem install execjs`
 
 You will need to research what works on your particular architecture and also bear in mind that version numbers may change over time.
 
-Note: This is currently running on ruby version 2.1.5, and if you try to run with a different version you may get an error like:
-
-``
-Your Ruby version is 2.3.0, but your Gemfile specified 2.1.5
-``
-
-To fix this, you need to change the version of ruby specified in `Gemfile`, the directive is:
-```
-ruby "2.1.5"
-```
-
-In the example above you would need to change it to `2.3.0`. Note that this has not been tested by me and your mileage may vary if you use an arbitary version of ruby, however, the version above (`2.3.0`) has been reported to run correctly, and in most cases it should be fine.
+Note: This is currently running on various versions of Ruby and there are no strong dependencies however your mileage may vary.
 
 Next, in the `./lib` directory, copy the ha_conf.rb.example file to ha_conf.rb and edit its settings to reflect your installation, pointing to the machine Home Assistant is running on and adding your api_key.
 
@@ -90,7 +131,7 @@ $news_feeds = {
 }
 ```
 
-You can leave these alone for now or if you prefer customize them as described in the New widget section below.
+You can leave these alone for now or if you prefer customize them as described in the News widget section below.
 
 When you are done, you can start a local webserver like this:
 
@@ -100,7 +141,7 @@ $ dashing start
 
 Point your browser to **http://localhost:3030** to access the hadashboard on your local machine.and you should see the supplied default dashboard.
 
-# Configuring The Dashboard
+# Configuring The Dashboard (All installations)
 Hadashboard is a Dashing app, so make sure to read all the instructions on http://dashing.io to learn how to add widgets to your dashboard, as well as how to create new widgets. 
 
 Make a copy of dashboards/example.erb and call it 'main.erb', then edit this file to reference the items you want to display and control and to get the layout that you want. Leave the original example.erb intact and unchanged so that you don't run into problems when trying to update using the git commands mentioned later in "Updating the Dashboard".
@@ -147,8 +188,8 @@ Widget type ***Halock***
 Widget type ***Hadevicetracker***
 ## light
 Widget type  ***Hadimmer***
-## garage
-Widget type ***Hagarage***
+## cover
+Widget type ***Hacover***
 ## input_boolean
 Widget type ***Hainputboolean***
 ## scene
@@ -207,25 +248,56 @@ Widget type ***Hagroup***
 
 The Hagroup widget uses the homeassistant/turn_on and homeassistant/turn_off API call, so certain functionality will be lost.  For example, you will not be able to use control groups of locks or dim lights.
 
+# Alarm Control Panel
+
+These widgets allow the user to create a working control panel that can be used to control the Manual Alarm Control Panel component (https://home-assistant.io/components/alarm_control_panel.manual). The example dashboard contains an arrangement similar to this:
+
+![UI](images/alarm_panel.png)
+
+Widget type ***Haalarmstatus***
+
+The Haalarmstatus widget displays the current status of the alarm_control_panel entity. It will also display the code as it is being entered by the user.
+
+The data-id must be the same as the alarm_control_panel entity_id in Home Assistant.
+
+Widget type ***Haalarmdigit***
+
+The Haalarmdigit widget is used to create the numeric keypad for entering alarm codes.
+
+data-digit holds the numeric value you wish to enter. The special value of "-" creates a 'clear' button which will wipe the code and return the Haalarmstatus widget display back to the current alarm state.
+
+data-alarmentity holds the data-id of the Haalarmstatus widget, so that the status widget can be correctly updated. It is mandatory for a 'clear' type digit and optional for normal numeric buttons.
+
+Widget type ***Haalarmaction***
+
+The Haalarmaction widget creates the arm/disarm/trigger buttons. Bear in mind that alarm triggering does not require a code, so you may not want to put this button near the other buttons in case it is pressed accidentally.
+
+data-action must contain one of the following: arm_home/arm_away/trigger/disarm.
+
 # weather (requires forecast.io)
 
 Widget type ***Haweather***
 
 In order to use the weather widget you must configure the forecast.io component, and ensure that you configure at least the following monitored conditions in your Home Assistant sensor config:
 
-- weather_temperature
-- weather_humidity
-- weather_precip_probability
-- weather_precip_intensity
-- weather_wind_speed
-- weather_pressure
-- weather_wind_bearing
-- weather_apparent_temperature
-- weather_icon
+- temperature
+- humidity
+- precip_probability
+- precip_intensity
+- wind_speed
+- pressure
+- wind_bearing
+- apparent_temperature
+- icon
 
 The `data-id` of the Haweather widget must be set to `weather` or the widget will not work.
 
-The Haweather widget supports an optional `data-bgcolor` - the background color of the widget. This can be used to make the feed stand out from other tiles if required, the default is the standard grey like the rest of the widgets.
+The Hatemp widget supports an additional paramater  `data-unit` - this allows you to set the unit to whatever you want - Centigrade, Farenheight or even Kelvin if you prefer ;) You will need to explicitly include the degree symbol like this:
+```html
+data-unit="&deg;F"
+```
+If omitted, no units will be shown.
+
 ## news
 Widget type ***News*** (contributed by [KRiS](https://community.home-assistant.io/users/kris/activity))  
 
@@ -260,8 +332,7 @@ This is an alternative to the the text based humidity widget above, it display t
 
 ## sensor (luminance)
 Widget type ***Halux***
-## sensor (motion)
-Widget type ***Hamotion***
+
 
 ## sensor (temperature)
 Widget type ***Hatemp***  
@@ -305,7 +376,7 @@ You can also have multiple dashboards, by simply adding a new .erb file to the d
 
 For example, if you want to deploy multiple devices, you could have one dashboard per room and still only use one hadashboard app installation.
 
-# Installing hapush
+# Installing hapush (Not necessary if you are using Docker)
 
 When you have the dashboard correctly displaying and interacting with Home Assistant you are ready to install the final component - `hapush`. Without `hapush` the dashboard would not respond to events that happen outside of the hadashboard system. For instance, if someone uses the Home Assistant interface to turn on a light, or even another App or physical switch, there is no way for the Dashboard to reflect this change. This is where `hapush` comes in.
 
@@ -331,8 +402,9 @@ This can be fixed with:
 $ sudo pip3 install --upgrade requests
 ```
 
+# Configuring hapush (all installation methods)
 
-When you have all the prereqs in place, edit the hapush.cfg file to reflect your environment:
+When you have all the prereqs in place, copy the hapush.cfg.example file to hapush.cfg then edit it to reflect your environment:
 
 ```
 ha_url = "http://192.168.1.10:8123"
@@ -345,17 +417,20 @@ logfile = "/etc/hapush/hapush.log"
 - `ha_url` is a reference to your home assistant installation and must include the correct port number and scheme (`http://` or `https://` as appropriate)
 - `ha_key` should be set to your key if you have one, otherwise it can be removed.
 - `dash_host` should be set to the IP address and port of the host you are running Dashing on (no http or https) - this should be the same machine as you are running `hapush` on.
-- `dash_dir` is the path on the machine that stores your dashboards. This will be the subdirectory `dashboards` relative to the path you cloned `hadashboard` to. 
-- `logfile` is the path to where you want `hapush` to keep its logs. When run from the command line this is not used - log messages come out on the terminal. When running as a daemon this is where the log information will go. In the example above I created a directory specifically for hapush to run from, although there is no reason you can't keep it in the `hapush` subdirectory of the cloned repository.
+- `dash_dir` is the path on the machine that stores your dashboards. This will be the subdirectory `dashboards` relative to the path you cloned `hadashboard` to. For Docker installs this should be set to `/app/dashboards`
+- `logfile` is the path to where you want `hapush` to keep its logs. When run from the command line this is not used - log messages come out on the terminal. When running as a daemon this is where the log information will go. In the example above I created a directory specifically for hapush to run from, although there is no reason you can't keep it in the `hapush` subdirectory of the cloned repository. For Docker installs this should be set to `/app/hapush/hapush.log`
 
+# Running hapush
 
-You can then run hapush from the command line as follows:
+For a manual installation you can then run hapush from the command line as follows:
 
 ```bash
 $ ./hapush.py hapush.cfg
 ```
 
-If all is well, you should start to see `hapush` responding to events as they occur:
+For docker installs, hapush will be started automatically when you run the startup command.
+
+If all is well, you should start to see `hapush` responding to events as they occur. For a docker install you should see these messages in hapush/hapush.log
 
 ```
 2016-06-19 10:05:59,693 INFO Reading dashboard: /srv/hass/src/hadashboard/dashboards/main.erb
@@ -383,6 +458,10 @@ If all is well, you should start to see `hapush` responding to events as they oc
 # Starting At Reboot
 To run Dashing and `hapush` at reboot, I have provided sample init scripts in the `./init` directory. These have been tested on a Raspberry PI - your mileage may vary on other systems.
 
+Instructions for automaticaly starting a docker install can be found (here)[https://docs.docker.com/engine/admin/host_integration/].
+
+For docker you may also want to use docker-compose - there is a sample compose file in the `./init` directory.
+
 # Updating The Dashboard
 To update the dashboard after I have released new code, just run the following command to update your copy:
 
@@ -394,72 +473,6 @@ For some releases you may also need to rerun the bundle command:
 ``` bash
 $ bundle
 ```
-# Release Notes
-***Version 1.5.1***
 
-- Fixed an issue with Float conversions on a weather field
+For docker users, you will also need to rerun the docker build process.
 
-*Changes in behavior*
-
-`Wind Chill` on the weather widget has been replaced by `Apparent Temperature` whcih is now passed straight through from the sensor value.
-
-***Version 1.5***
-
-- Merge Hagroup contributed by [jwl173305361](https://community.home-assistant.io/users/jwl173305361/activity)
-- Add background color support for all widgets
-
-***Version 1.4***
-
-- Addition of Halock contributed by [jwl173305361](https://community.home-assistant.io/users/jwl173305361/activity)
-- Addition of Hasensor
-- Addition of Hameter
-
-*Breaking Changes*
-
-None, however, Hasensor is intended as a replacement for Hatemp, Hahumidity and Halux, which are now deprecared and will be removed in a future release. Similarly, Hameter is intended to replace Hahumiditymeter.
-
-***Version 1.3.2***
-
-- Script buttons now light up for a configurable period when activated
-- In order to accommodate the above change, functionality to run scripts and track the state of an input_select has been broken out into a new widget called `Hamode`
-
-*Breaking Changes*
-
-- Hascript no longer has the ability to track and display the state of an input_slelect. If you were using this functionality, change the type of your widget to `Hamode`
-
-
-***Version 1.3.1***
-
-- Scene buttons now light up for a configurable period when activated
-
-***Version 1.3***
-
-- Merge RSS widget contributed by [KRiS](https://community.home-assistant.io/users/kris/activity)
-- Merge Hahumiditymeter contributed by [Shiv Chanders](https://community.home-assistant.io/users/chanders/activity)
-- Allow temperature unit to be specified in the dasboard
-- Remove main.erb and replace it with example.erb
-- Update README to reflect new widgets
-- Update README with additional install notes
-- Update README with section on updating the dashboard
-
-*Breaking Changes*
-
-Previously temperature units defaulted to Fahrenheit - now there is no default, you must explicitly specify it in the Hatemp widget or you will get no units at all.
-
-***Version 1.2.1***
-
-- Minor typos in README
-
-***Version 1.2***
-
-- Fix docs and excample cfg to remove scheme from `hapush` dash_host config variable
-
-***Version 1.1*** 
-
-- Expand instructions
-- Allow no api_key
-- Allow http connections
-
-***Version 1.0***
-
-Initial Release

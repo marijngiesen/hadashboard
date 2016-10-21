@@ -1,3 +1,19 @@
 Gemfile.lock
 hapush/hapush.log
 persistent.db
+# Ignore any dashboards you create
+dashboards/*
+# But don't ignore these
+!dashboards/example.erb
+!dashboards/layout.erb
+
+# Ignore runtime and environment stuff
+history.yml
+persistent.db
+Gemfile.lock
+dashing.pid
+.bundle
+log/thin.log
+
+# Virtual environment folder for running hapush
+venv*
